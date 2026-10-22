@@ -127,3 +127,70 @@ sudo pacman -U linux-kestrel-*.pkg.tar.zst
 
 The ISO builds this automatically via `install/kestrel-source.packages`, and
 `[kestrel]` serves it after install.
+
+## Kernel-visible class contract (kernel bridge)
+
+The desktop's resource classes are a delegated cgroup v2 hierarchy,
+`kestrel.slice`, shipped as systemd user slices in the payload
+(`default/systemd/user/kestrel*.slice`) and materialised at session start by
+`kestrel-slices.service`:
+
+| Slice | Contents | Initial policy |
+|---|---|---|
+| `kestrel.slice` | parent of the classes | accounting on |
+| `kestrel-desktop.slice` | Quickshell and compositor-adjacent work | `CPUWeight=1000`, `IOWeight=1000` |
+| `kestrel-term.slice` | interactive terminals | `CPUWeight=300`, `IOWeight=500`, oomd kill candidate |
+| `kestrel-browser.slice` | browsers and their content processes | `CPUWeight=200`, `IOWeight=300`, oomd kill candidate |
+| `kestrel-game.slice` | games | `CPUWeight=800`, `IOWeight=800` |
+| `kestrel-background.slice` | background work | `CPUWeight=50`, `IOWeight=50` |
+
+The compositor itself stays in `session.slice`, where systemd's structural oomd
+protection already keeps it out of the kill candidate pool; only its clients
+move into a class. `kestrel-broker` places tasks and adjusts the dynamic limits
+(`memory.high`, `memory.reclaim`) at runtime, and `scx_kestrel` reads the class.
+Nothing depends on a kernel patch yet: the hierarchy alone is the class lever.
+
+The per-task hint channel is a second, additive layer: a hint value set through
+`sched_setattr(2)` with a Kestrel flag and read by `scx_kestrel` through a
+`scx_bpf_task_hint()` kfunc. That is the kernel-bridge plan's section 4 patch;
+until it lands, classification is by cgroup and process name.
+
+### The per-task hint ABI
+
+| Item | Value |
+|---|---|
+| Field | `struct sched_attr::sched_ext_hint` (`__u32`, appended) |
+| Flag | `SCHED_FLAG_KESTREL_HINT` = `1ULL << 40`, added to `SCHED_FLAG_ALL` |
+| Max | `SCHED_KESTREL_HINT_MAX` = 1024; a larger value is `EINVAL` |
+| Discovery | `sched_getattr(2)` returns a `size` that does not cover the field on a stock kernel |
+| Scheduler | `scx_bpf_task_hint(struct task_struct *)`, a read-only kfunc in `scx_kfunc_ids_any` |
+
+Hint values `scx_kestrel` uses: 1 desktop, 2 term, 3 browser active, 4 browser
+background, 5 game. The kernel side lives in `kestrel-distro/kernel` under
+`packaging/local/kestrel/`; userspace in
+`kestrel/install/helpers/libkestrel-hint`.
+
+### Rebasing onto a new kernel
+
+Weekly or bi-weekly, when the CachyOS pin moves:
+
+1. Bump `_major`/`_minor`/`_tagrel` and the source checksum in
+   `packaging/local/PKGBUILD`, and update `PINS.md`.
+2. `git apply --check -p1` the hint patch against the new tarball. The build
+   does this itself and fails loudly; checking first shortens the loop.
+3. Resolve context drift by hand. The touched functions are stable: struct
+   `sched_attr`, `SCHED_FLAG_ALL`, struct `sched_ext_entity`,
+   `__sched_setscheduler()` and the sched_ext kfunc set.
+4. Rebuild `scx_kestrel` from `kestrel-distro/scx` in the same cycle: the
+   sched_ext ABI is explicitly unstable across kernels.
+5. Boot `linux-kestrel` and run the `session` mode in `bench/README.md`
+   against the previous kernel before promoting anything.
+
+### Promotion gates
+
+Nothing ships on intuition. cgroup classes and the broker are promoted first
+(no kernel change), then the hint ABI, then `scx_kestrel` as the default only
+if `bench/compare` shows a repeatable win over `scx_bpfland`, then the app
+hints. `scx_bpfland` and the stock `linux` kernel stay available as fallbacks
+at every step; bare-metal promotion for GPU and frame-time is a separate,
+later gate.

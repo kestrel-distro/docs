@@ -82,3 +82,21 @@ The VM measures scheduler/memory/boot; GPU and frame-time need bare metal (the
 The original working plan - every decision, rejection, and drift check - is kept
 at `~/Documents/kestrel-resource-minimization-plan.md` in the maintainer's
 checkout. This document is the distilled reference.
+
+## Hot-path dependencies (kernel bridge)
+
+The bridge's dependency work is limited to the compositor and browser hot path
+and reuses interfaces the kernel already has:
+
+- Mesa/DRM: the compositor raises its own GPU context priority through the
+  existing `AMDGPU_CTX_*` / `I915_CONTEXT_PARAM_PRIORITY` ioctls; no kernel
+  patch.
+- PipeWire: realtime scheduling through rtkit and the shipped `rtirq` units,
+  with `node.latency` tuned per device.
+- jemalloc: `MALLOC_CONF=background_thread:true,thp:always` for the shell, as
+  shipped in `default/hypr/envs.lua`.
+- Fonts: `QS_DROP_EXPENSIVE_FONTS=1` and the lean Quickshell build keep shell
+  text rendering off the hot path.
+
+None of these add kernel surface; they drive the existing interfaces from the
+payload.
