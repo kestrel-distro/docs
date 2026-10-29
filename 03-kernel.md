@@ -80,8 +80,9 @@ hand-edit it**. All Kestrel changes go through `scripts/config` in `prepare()`.
 
 ## The benchmark harness
 
-`bench/run` collects metrics for the running kernel; `bench/compare` prints the
-delta between two runs. Run once per kernel, compare.
+`bench/run` collects metrics for the running kernel; `bench/compare` groups
+runs by variant and prints median `[min..max]` deltas. Run once per image,
+compare.
 
 ```
 bench/run stock          # booted into stock `linux`
@@ -90,6 +91,15 @@ bench/run kestrel
 bench/compare bench/results/<stock-dir> bench/results/<kestrel-dir>
 ```
 
+`bench/matrix` is the factor matrix for the bridge: scheduler
+(`scx_bpfland` vs `scx_kestrel`) x broker/cgroups x hints, five interleaved
+repeats per variant, with `KESTREL_MATRIX_BG_CPUS` contention so the
+interactive classes actually queue. It labels every result with
+`packages=`/`kernel=` context, so the stock-Arch-package and stock-kernel
+baselines compare in the same table. Per-class runqueue wait comes from
+`/proc/<pid>/schedstat` (rootless); the full contract is in
+`kernel/bench/README.md`.
+
 Modes via `KESTREL_BENCH_MODE` (default `all`):
 
 | Mode | Metrics | Where |
@@ -97,6 +107,7 @@ Modes via `KESTREL_BENCH_MODE` (default `all`):
 | `cpu` | schbench wakeup latency, cyclictest, stress-ng throughput | VM or bare metal |
 | `footprint` | kernel/module bytes, `/proc/meminfo` slab, `systemd-analyze` boot, loaded modules | VM or bare metal |
 | `desktop` | Hyprland + Quickshell CPU%/RSS, idle `nvidia-smi`, `powertop` wakeups | bare metal, live session |
+| `session` | per-class CPU%, wakeups/s, RSS and scheduling wait under workload | live session |
 
 `bench/compare` skips keys missing from either side, so mixing modes is safe.
 Tools: `schbench`, `cyclictest` (rt-tests), `stress-ng`, `powertop` (root);
