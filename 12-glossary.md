@@ -36,7 +36,7 @@ Terms used across the Kestrel infrastructure.
 - **`[kestrel]` publish workflow** - `.github/workflows/publish.yml` in
   `kestrel-distro/packages`; builds, signs, and deploys the repository.
 - **`sched_ext` / scx** - pluggable BPF CPU schedulers; Kestrel ships with
-  `scx_bpfland` as the default via `scx_loader`.
+  `scx_kestrel` as the default via `scx_loader`; `scx_bpfland` is the fallback.
 - **squashfs** - the compressed read-only root filesystem inside the ISO.
 - **ThinLTO** - clang link-time optimization; used for the kernel and the
   desktop packages.

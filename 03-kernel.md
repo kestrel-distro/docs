@@ -199,9 +199,8 @@ Weekly or bi-weekly, when the CachyOS pin moves:
 
 ### Promotion gates
 
-Nothing ships on intuition. cgroup classes and the broker are promoted first
-(no kernel change), then the hint ABI, then `scx_kestrel` as the default only
-if `bench/compare` shows a repeatable win over `scx_bpfland`, then the app
-hints. `scx_bpfland` and the stock `linux` kernel stay available as fallbacks
-at every step; bare-metal promotion for GPU and frame-time is a separate,
-later gate.
+Nothing ships on intuition. The cgroup classes and broker are in place, the
+hint ABI is validated, and `scx_kestrel` is the default. `scx_bpfland` and the
+stock `linux` kernel stay available as fallbacks. Promotion to bare metal for
+GPU and frame-time remains a separate, later gate; the VM matrix covers
+scheduler, hint, cgroup and memory behavior only.

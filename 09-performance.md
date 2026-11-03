@@ -29,7 +29,7 @@ the deltas.
 - Kept the CachyOS recipe, ThinLTO, x86-64-v3, `-O3`.
 - **Dropped per-module BTF** (`DEBUG_INFO_BTF_MODULES`): no shipped tool consumes
   it, and it bloats every module. Core BTF is kept so `sched_ext` works.
-- Kept `sched_ext` (`scx_bpfland` is the shipped default), DAMON (backs
+- Kept `sched_ext` (`scx_kestrel` is the shipped default; `scx_bpfland` remains the fallback), DAMON (backs
   `kestrel-damon-reclaim`), PSI (systemd-oomd needs it) and NTSYNC.
 - Added opt-in **`_trim_ksyms`** (`TRIM_UNUSED_KSYMS`) and **`_footprint`**
   (disable legacy/desktop-unused subsystems), both off by default and gated on a
@@ -91,8 +91,9 @@ and reuses interfaces the kernel already has:
 - Mesa/DRM: the compositor raises its own GPU context priority through the
   existing `AMDGPU_CTX_*` / `I915_CONTEXT_PARAM_PRIORITY` ioctls; no kernel
   patch.
-- PipeWire: realtime scheduling through rtkit and the shipped `rtirq` units,
-  with `node.latency` tuned per device.
+- PipeWire: realtime scheduling through rtkit, with `node.latency` tuned per
+  device. The `rtirq` units are installed but disabled while `threadirqs` is
+  absent from the installed kernel command line.
 - jemalloc: `MALLOC_CONF=background_thread:true,thp:always` for the shell, as
   shipped in `default/hypr/envs.lua`.
 - Fonts: `QS_DROP_EXPENSIVE_FONTS=1` and the lean Quickshell build keep shell
