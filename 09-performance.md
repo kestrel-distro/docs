@@ -55,6 +55,31 @@ feature, so the trade was a loss.
 - **Rejected** `misc:disable_autoreload` / `QS_DISABLE_FILE_WATCHER`: the manual
   documents live config reload, so disabling watchers would break it.
 
+### Scheduler layer tuning (VM matrix)
+
+`scx_kestrel` now uses short latency slices instead of the 20 ms default:
+desktop 2 ms, terminal/audio 1 ms, active browser 3 ms, background browser
+20 ms, with `min_exec_us`, `preempt_first` and peak-util holding on the
+latency-sensitive layers. The broker also sets class `cpu.uclamp.min/max`;
+UCLAMP feeds schedutil frequency through the sched_ext class aggregation, while
+placement remains the BPF scheduler's job. PipeWire/WirePlumber/Jack have a
+dedicated audio class and layer; games and short interactive tasks have
+classification paths.
+
+A clean 20-cell VM matrix (5 reps, background contention, cleanup enabled)
+compared the tuned layers with the previous layer file, EEVDF and lavd:
+
+| Metric (median) | Tuned Kestrel | Old layers | EEVDF | lavd |
+|---|---:|---:|---:|---:|
+| schbench p99 | 2588 µs | 2860 | 2588 | 2588 |
+| schbench p90 | 981 µs | 971 | 793 | 553 |
+| schbench RPS | 1667 | 1678 | 1638 | 1664 |
+| cyclictest avg | 43 µs | 42 | 62 | 45 |
+| CPU PSI some60 | 0.59% | 1.35 | 0.57 | 0.90 |
+
+The tuned layers remove the old p99/PSI regression without losing RPS, but this
+is a VM result: frame time, GPU, thermal and power are still unmeasured.
+
 ## What was deliberately not done
 
 - **Aggressive package trimming** (`kestrel-base.packages`): cups, bluez, docker,

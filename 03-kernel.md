@@ -177,8 +177,11 @@ until it lands, classification is by cgroup and process name.
 | Scheduler | `scx_bpf_task_hint(struct task_struct *)`, a read-only kfunc in `scx_kfunc_ids_any` |
 
 Hint values `scx_kestrel` uses: 1 desktop, 2 term, 3 browser active, 4 browser
-background, 5 game. The kernel side lives in `kestrel-distro/kernel` under
-`packaging/local/kestrel/`; userspace in
+background, 5 game. Audio has no hint value; the broker places PipeWire,
+WirePlumber and Jack in `kestrel-audio.slice`, which the `kestrel-audio` layer
+matches. Unclassified short-running tasks can also match the experimental
+`AvgRuntime` interactive-short layer. The kernel side lives in
+`kestrel-distro/kernel` under `packaging/local/kestrel/`; userspace in
 `kestrel/install/helpers/libkestrel-hint`.
 
 ### Rebasing onto a new kernel
