@@ -66,19 +66,22 @@ placement remains the BPF scheduler's job. PipeWire/WirePlumber/Jack have a
 dedicated audio class and layer; games and short interactive tasks have
 classification paths.
 
-A clean 20-cell VM matrix (5 reps, background contention, cleanup enabled)
-compared the tuned layers with the previous layer file, EEVDF and lavd:
+A clean 20-cell VM matrix (4 variants x 5 reps, background contention, cleanup
+enabled) compared bpfland, EEVDF, lavd and the tuned layers:
 
-| Metric (median) | Tuned Kestrel | Old layers | EEVDF | lavd |
+| Metric (median) | tuned Kestrel | bpfland | EEVDF | lavd |
 |---|---:|---:|---:|---:|
-| schbench p99 | 2588 µs | 2860 | 2588 | 2588 |
-| schbench p90 | 981 µs | 971 | 793 | 553 |
-| schbench RPS | 1667 | 1678 | 1638 | 1664 |
-| cyclictest avg | 43 µs | 42 | 62 | 45 |
-| CPU PSI some60 | 0.59% | 1.35 | 0.57 | 0.90 |
+| schbench p99 | 2852 µs | 2980 | 2876 | 2836 |
+| schbench p90 | 1206 µs | 1234 | 1262 | 755 |
+| schbench RPS | 1529 | 1540 | 1486 | 1531 |
+| cyclictest avg | 63 µs | 67 | 42 | 79 |
+| cyclictest max | 6977 µs | 9147 | 7557 | 8856 |
+| CPU PSI some60 | 0.60% | 0.45 | 0.64 | 1.06 |
 
-The tuned layers remove the old p99/PSI regression without losing RPS, but this
-is a VM result: frame time, GPU, thermal and power are still unmeasured.
+The tuned layers beat bpfland on p99, p90, p999, cyclictest max and average;
+RPS is 0.7% lower, within VM noise. PSI is higher than bpfland but low in
+absolute terms. This is a VM result: frame time, GPU, thermal and power are
+still unmeasured.
 
 ## What was deliberately not done
 
